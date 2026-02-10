@@ -208,3 +208,22 @@ def get_audio_data(response_content):
     if hasattr(response_content, "content"):
         return response_content.content
     return response_content
+
+
+
+def play_wav(audio_output_file_path, speed):
+    # 1. フォルダが存在するか確認し、なければ作成する
+    dir_name = os.path.dirname(audio_output_file_path)
+    if dir_name and not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+
+    # 2. ファイルの読み込みと再生
+    try:
+        if os.path.exists(audio_output_file_path):
+            with open(audio_output_file_path, "rb") as f:
+                audio_bytes = f.read()
+            st.audio(audio_bytes, format="audio/wav", autoplay=True)
+        else:
+            st.error(f"ファイルが見つかりません: {audio_output_file_path}")
+    except Exception as e:
+        st.error(f"再生エラー: {e}")
