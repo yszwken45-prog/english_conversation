@@ -198,19 +198,16 @@ if st.button("英会話開始"):
     # if audio_bytes:
     #     st.audio(audio_bytes, format="audio/wav", autoplay=True)
     
+    # 1. key 引数を削除
+    # 2. 条件分岐で、音声がある時だけ表示されるようにする
     if audio_bytes is not None:
-        try:
-        # 確実に一意かつ文字列のキーを作成
-            unique_key = f"audio_player_{hash(st.session_state.get('problem', 'default'))}"
-        
-            st.audio(
-            data=audio_bytes,      # data= と明示する
-            format="audio/wav", 
-            autoplay=True, 
-            key=unique_key
-        )
-        except Exception as e:
-            st.error(f"再生コンポーネントの表示に失敗しました: {e}")    
+            try:
+                st.audio(
+                    audio_bytes,      # 位置引数として渡す
+                    format="audio/wav"
+                )
+            except Exception as e:
+                st.error(f"再生に失敗しました: {e}") 
         
 
 
