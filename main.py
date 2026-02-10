@@ -198,10 +198,20 @@ if st.button("英会話開始"):
     # if audio_bytes:
     #     st.audio(audio_bytes, format="audio/wav", autoplay=True)
     
-    if audio_bytes:
-    # 常に一意のID（例：再生時のタイムスタンプ）を付与する
-        unique_key = f"audio_{int(time.time())}"
-        st.audio(audio_bytes, format="audio/wav", autoplay=True, key=unique_key)
+    if audio_bytes is not None:
+        try:
+        # 確実に一意かつ文字列のキーを作成
+            unique_key = f"audio_player_{hash(st.session_state.get('problem', 'default'))}"
+        
+            st.audio(
+            data=audio_bytes,      # data= と明示する
+            format="audio/wav", 
+            autoplay=True, 
+            key=unique_key
+        )
+        except Exception as e:
+            st.error(f"再生コンポーネントの表示に失敗しました: {e}")    
+        
 
 
     # モード：「日常英会話」
