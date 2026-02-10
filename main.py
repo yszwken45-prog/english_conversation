@@ -202,6 +202,7 @@ if st.button("英会話開始"):
     # 1. key 引数を削除
     # 2. 条件分岐で、音声がある時だけ表示されるようにする
     if audio_bytes is not None:
+            audio_placeholder.audio(audio_bytes, format="audio/wav")
             try:
                 st.audio(
                     audio_bytes,      # 位置引数として渡す
