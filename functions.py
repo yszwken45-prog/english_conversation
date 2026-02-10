@@ -3,7 +3,6 @@ import os
 import time
 from pathlib import Path
 import wave
-import pyaudio
 from pydub import AudioSegment
 from audiorecorder import audiorecorder
 import numpy as np
@@ -18,6 +17,7 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
 import constants as ct
+from playsound import playsound
 
 def record_audio(audio_input_file_path):
     """
@@ -85,7 +85,7 @@ def play_wav(audio_output_file_path, speed=1.0):
 
     # 音声ファイルの読み込み
     audio = AudioSegment.from_wav(audio_output_file_path)
-    
+
     # 速度を変更
     if speed != 1.0:
         # frame_rateを変更することで速度を調整
@@ -98,25 +98,9 @@ def play_wav(audio_output_file_path, speed=1.0):
 
         modified_audio.export(audio_output_file_path, format="wav")
 
-    # PyAudioで再生
-    with wave.open(audio_output_file_path, 'rb') as play_target_file:
-        p = pyaudio.PyAudio()
-        stream = p.open(
-            format=p.get_format_from_width(play_target_file.getsampwidth()),
-            channels=play_target_file.getnchannels(),
-            rate=play_target_file.getframerate(),
-            output=True
-        )
+    # playsoundで再生
+    playsound(audio_output_file_path)
 
-        data = play_target_file.readframes(1024)
-        while data:
-            stream.write(data)
-            data = play_target_file.readframes(1024)
-
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-    
     # LLMからの回答の音声ファイルを削除
     os.remove(audio_output_file_path)
 
