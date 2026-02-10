@@ -17,6 +17,7 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
 import constants as ct
+import re
 
 def record_audio(audio_input_file_path):
     """
@@ -159,3 +160,32 @@ def create_evaluation():
     llm_response_evaluation = st.session_state.chain_evaluation.predict(input="")
 
     return llm_response_evaluation
+
+
+
+
+def normalize_text(text):
+    """
+    比較用テキストのクリーニング
+    1. 小文字化
+    2. 文末の記号 (.?!) を削除
+    3. 前後の余計な空白を削除
+    """
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r'[.\?\!]', '', text) # 記号の削除
+    return text.strip()
+
+def check_answer(user_input, correct_answer):
+    """
+    正規化されたテキストで正誤判定を行う
+    """
+    norm_user = normalize_text(user_input)
+    norm_correct = normalize_text(correct_answer)
+    
+    if norm_user == norm_correct:
+        return True, "Perfect! 正解です！"
+    else:
+        # どのくらい合っているかなどのフィードバックをここに追加可能
+        return False, f"惜しい！ 正解は: {correct_answer}"
