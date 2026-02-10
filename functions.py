@@ -150,7 +150,7 @@ def create_problem_and_play_audio():
     # 音声ファイルの読み上げ
     play_wav(audio_output_file_path, st.session_state.speed)
 
-    return problem, llm_response_audio
+    return problem, audio_output_file_path
 
 
 def get_audio_bytes(audio_output_file_path):
@@ -199,3 +199,12 @@ def check_answer(user_input, correct_answer):
     else:
         # どのくらい合っているかなどのフィードバックをここに追加可能
         return False, f"惜しい！ 正解は: {correct_answer}"
+    
+def get_audio_data(response_content):
+    """
+    HttpxBinaryResponseContent から直接バイトデータを取り出す
+    """
+    # response_content が HttpxBinaryResponseContent の場合、.content で取得可能
+    if hasattr(response_content, "content"):
+        return response_content.content
+    return response_content
