@@ -195,9 +195,15 @@ if st.button("英会話開始"):
     
     # データを取得して再生
     audio_bytes = ft.get_audio_bytes(audio_path)
-    if audio_bytes:
-        st.audio(audio_bytes, format="audio/wav", autoplay=True)
+    # if audio_bytes:
+    #     st.audio(audio_bytes, format="audio/wav", autoplay=True)
     
+    if audio_bytes:
+    # 常に一意のID（例：再生時のタイムスタンプ）を付与する
+        unique_key = f"audio_{int(time.time())}"
+        st.audio(audio_bytes, format="audio/wav", autoplay=True, key=unique_key)
+
+
     # モード：「日常英会話」
     if st.session_state.mode == ct.MODE_1:
         # 音声入力を受け取って音声ファイルを作成
