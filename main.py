@@ -115,7 +115,11 @@ for message in st.session_state.messages:
             st.markdown(message["content"])
     else:
         st.divider()
-
+# main.py の上部、あるいは実行ボタンの直前
+if "chain_create_problem" not in st.session_state:
+    # ここで LangChain の初期化を行う関数を呼ぶ
+    # 例: st.session_state.chain_create_problem = ft.initialize_chain()
+    st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
 # LLMレスポンスの下部にモード実行のボタン表示
 if st.session_state.shadowing_flg:
     st.session_state.shadowing_button_flg = st.button("シャドーイング開始")

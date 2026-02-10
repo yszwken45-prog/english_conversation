@@ -227,3 +227,17 @@ def play_wav(audio_output_file_path, speed):
             st.error(f"ファイルが見つかりません: {audio_output_file_path}")
     except Exception as e:
         st.error(f"再生エラー: {e}")
+
+
+# functions.py
+
+def create_problem_and_play_audio():
+    # session_state に chain があるか確認
+    if "chain_create_problem" not in st.session_state:
+        # もし未初期化なら、ここで初期化関数を呼ぶなどして回避する
+        st.error("AIの初期化に失敗しました。ページをリロードしてください。")
+        return None, None
+
+    # 安全に呼び出し
+    problem = st.session_state.chain_create_problem.predict(input="")
+    # ... 以下の処理 ...
