@@ -143,7 +143,7 @@ if st.session_state.start_flg:
         # チャット入力以外
         if not st.session_state.chat_open_flg:
             with st.spinner('問題文生成中...'):
-                st.session_state.problem, llm_response_audio = ft.create_problem_and_play_audio()
+                st.session_state.problem, audio_path = ft.create_problem_and_play_audio()
 
             st.session_state.chat_open_flg = True
             st.session_state.dictation_flg = False
@@ -187,6 +187,16 @@ if st.session_state.start_flg:
 
             st.rerun()
 
+
+# --- 修正後の main.py イメージ ---
+if st.button("英会話開始"):
+    # 問題作成と音声ファイル生成
+    st.session_state.problem, audio_path = ft.create_problem_and_play_audio()
+    
+    # データを取得して再生
+    audio_bytes = ft.get_audio_bytes(audio_path)
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/wav", autoplay=True)
     
     # モード：「日常英会話」
     if st.session_state.mode == ct.MODE_1:

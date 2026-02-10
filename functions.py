@@ -152,6 +152,16 @@ def create_problem_and_play_audio():
 
     return problem, llm_response_audio
 
+
+def get_audio_bytes(audio_output_file_path):
+    """ファイルからバイナリデータを取得する"""
+    try:
+        with open(audio_output_file_path, "rb") as f:
+            return f.read()
+    except Exception as e:
+        st.error(f"ファイルの読み込みに失敗しました: {e}")
+        return None
+
 def create_evaluation():
     """
     ユーザー入力値の評価生成
