@@ -17,7 +17,6 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
 import constants as ct
-from playsound import playsound
 
 def record_audio(audio_input_file_path):
     """
@@ -98,8 +97,10 @@ def play_wav(audio_output_file_path, speed=1.0):
 
         modified_audio.export(audio_output_file_path, format="wav")
 
-    # playsoundで再生
-    playsound(audio_output_file_path)
+    # Streamlitのst.audioを使用して再生
+    with open(audio_output_file_path, "rb") as audio_file:
+        audio_bytes = audio_file.read()
+        st.audio(audio_bytes, format="audio/wav")
 
     # LLMからの回答の音声ファイルを削除
     os.remove(audio_output_file_path)
