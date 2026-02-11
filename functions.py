@@ -125,6 +125,7 @@ def create_chain(system_template):
     return chain
 
 def create_problem_and_play_audio():
+    
     """
     問題生成と音声ファイルの再生
     Args:
@@ -134,23 +135,31 @@ def create_problem_and_play_audio():
     """
 
     # 問題文を生成するChainを実行し、問題文を取得
-    problem = st.session_state.chain_create_problem.predict(input="")
+    try:
+        problem = st.session_state.chain_create_problem.predict(input="")
 
     # LLMからの回答を音声データに変換
-    llm_response_audio = st.session_state.openai_obj.audio.speech.create(
-        model="tts-1",
-        voice="alloy",
-        input=problem
-    )
+        llm_response_audio = st.session_state.openai_obj.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=problem
+        )
 
     # 音声ファイルの作成
-    audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
-    save_to_wav(llm_response_audio.content, audio_output_file_path)
+        audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
+        save_to_wav(llm_response_audio.content, audio_output_file_path)
 
     # 音声ファイルの読み上げ
-    play_wav(audio_output_file_path, st.session_state.speed)
+        play_wav(audio_output_file_path, st.session_state.speed)
 
-    return problem, audio_output_file_path
+        return problem, audio_output_file_path
+    except Exception as e:
+        print(f"Error: {e}")
+        # ここで return し忘れると、関数は None を返す
+        # 代入時に TypeError: cannot unpack non-iterable NoneType object が発生
+        return None, None  # 回避策：ダミーの値を返す
+        
+
 
 
 def get_audio_bytes(audio_output_file_path):
