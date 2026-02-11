@@ -157,15 +157,25 @@ if st.session_state.start_flg:
             st.session_state.dictation_first_flg = False
         # チャット入力以外
         if not st.session_state.chat_open_flg:
+            # with st.spinner('問題文生成中...'):
+            #     problem, audio_path = ft.create_problem_and_play_audio()
+
+            #     if problem is None or audio_path is None:
+            #         st.error("問題の生成または音声ファイルの作成に失敗しました。再試行してください。")
+            #         st.stop()
+
+            #     st.session_state.problem = problem
+            #     st.session_state.audio_path = audio_path
             with st.spinner('問題文生成中...'):
-                problem, audio_path = ft.create_problem_and_play_audio()
-
-                if problem is None or audio_path is None:
-                    st.error("問題の生成または音声ファイルの作成に失敗しました。再試行してください。")
-                    st.stop()
-
-                st.session_state.problem = problem
-                st.session_state.audio_path = audio_path
+                result = ft.create_problem_and_play_audio()
+    
+            #  正常に2つの値が返ってきた場合のみ代入
+            if isinstance(result, tuple) and len(result) == 2:
+                st.session_state.problem, st.session_state.audio_path = result
+            else:
+                st.error("問題の生成に失敗しました。")
+                st.session_state.problem = "エラー：生成失敗"
+                st.session_state.audio_path = None
 
             st.session_state.chat_open_flg = True
             st.session_state.dictation_flg = False
@@ -204,8 +214,17 @@ if st.session_state.start_flg:
             st.rerun()
 
 # オーディオ再生のエラーハンドリング
-if st.session_state.audio_path:
+# if st.session_state.audio_path:
+#     try:
+#         audio_placeholder.audio(ft.get_audio_bytes(st.session_state.audio_path), format="audio/wav")
+#     except Exception as e:
+#         st.error(f"音声ファイルの再生中にエラーが発生しました: {e}")
+# オーディオ再生のエラーハンドリング
+# .get() を使うか、"audio_path" in st.session_state を確認する
+if st.session_state.get("audio_path"):
     try:
-        audio_placeholder.audio(ft.get_audio_bytes(st.session_state.audio_path), format="audio/wav")
+        audio_bytes = ft.get_audio_bytes(st.session_state.audio_path)
+        if audio_bytes:
+            audio_placeholder.audio(audio_bytes, format="audio/wav")
     except Exception as e:
-        st.error(f"音声ファイルの再生中にエラーが発生しました: {e}")
+        st.warning(f"音声の再生中にエラーが発生しました: {e}")
