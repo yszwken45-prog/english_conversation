@@ -198,15 +198,18 @@ if st.button("英会話開始"):
     # 問題作成と音声ファイル生成
     st.session_state.problem, audio_path = ft.create_problem_and_play_audio()
     # main.py 199行目付近の修正案
-    result = ft.create_problem_and_play_audio()
+    
+    res = ft.create_problem_and_play_audio()
 
-# 戻り値が正しく(problem, path)のタプルで返ってきているか確認
-    if isinstance(result, tuple) and len(result) == 2:
-        st.session_state.problem, audio_path = result
+    if res is not None and isinstance(res, tuple) and len(res) == 2:
+        st.session_state.problem, audio_path = res
     else:
-        st.error("音声生成に失敗しました。戻り値が不正です。")
-        st.session_state.problem = "エラー：問題を生成できませんでした"
+    # エラー時のフォールバック処理
+        st.session_state.problem = "問題の作成に失敗しました。ログを確認してください。"
         audio_path = None
+        st.error("関数から正しい値が返されませんでした。")
+
+
     # データを取得して再生
     audio_bytes = ft.get_audio_bytes(audio_path)
     # if audio_bytes:
