@@ -194,25 +194,20 @@ if st.session_state.start_flg:
 # 1. 画面の適切な場所に、オーディオ専用の「空枠」を作る
 audio_placeholder = st.empty()
 # --- 修正後の main.py イメージ ---
-        
+# 初期化
+if "audio_path" not in st.session_state:
+    st.session_state.audio_path = None
+
 if st.button("英会話開始"):
-    # 1. まず変数1つで結果を受け取る
     result = ft.create_problem_and_play_audio()
-    
-    # 2. 結果が None ではなく、正しく2つの値が入っているかチェック
-    if result is not None and isinstance(result, tuple):
-        st.session_state.problem, audio_path = result
-        
-        # 音声の再生
-        if audio_path:
-            st.audio(audio_path)
-    else:
-        st.error("問題または音声の生成に失敗しました。")
-        # ログに詳細を出力して原因を探る
-        st.write(f"関数の戻り値: {result}")
+    if result:
+        st.session_state.problem, st.session_state.audio_path = result
 
-
-    # データを取得して再生
+# 保存されているパスがあれば再生
+if st.session_state.audio_path:
+    audio_bytes = ft.get_audio_bytes(st.session_state.audio_path)
+    st.audio(audio_bytes, format="audio/wav")
+    # 2. その「空枠」に対して、音声データをセットして再生する   
     audio_bytes = ft.get_audio_bytes(audio_path)
     # if audio_bytes:
     #     st.audio(audio_bytes, format="audio/wav", autoplay=True)
