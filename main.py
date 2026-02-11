@@ -47,6 +47,12 @@ if "messages" not in st.session_state:
     st.session_state.dictation_evaluation_first_flg = True
     st.session_state.chat_open_flg = False
     st.session_state.problem = ""
+    # main.py の初期化セクションに追加
+    if "problem" not in st.session_state:
+        st.session_state.problem = ""
+    if "audio_path" not in st.session_state:
+        st.session_state.audio_path = None
+
     
     st.session_state.openai_obj = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     st.session_state.llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
