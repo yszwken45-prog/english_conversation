@@ -194,20 +194,22 @@ if st.session_state.start_flg:
 # 1. 画面の適切な場所に、オーディオ専用の「空枠」を作る
 audio_placeholder = st.empty()
 # --- 修正後の main.py イメージ ---
+        
 if st.button("英会話開始"):
-    # 問題作成と音声ファイル生成
-    st.session_state.problem, audio_path = ft.create_problem_and_play_audio()
-    # main.py 199行目付近の修正案
+    # 1. まず変数1つで結果を受け取る
+    result = ft.create_problem_and_play_audio()
     
-    res = ft.create_problem_and_play_audio()
-
-    if res is not None and isinstance(res, tuple) and len(res) == 2:
-        st.session_state.problem, audio_path = res
+    # 2. 結果が None ではなく、正しく2つの値が入っているかチェック
+    if result is not None and isinstance(result, tuple):
+        st.session_state.problem, audio_path = result
+        
+        # 音声の再生
+        if audio_path:
+            st.audio(audio_path)
     else:
-    # エラー時のフォールバック処理
-        st.session_state.problem = "問題の作成に失敗しました。ログを確認してください。"
-        audio_path = None
-        st.error("関数から正しい値が返されませんでした。")
+        st.error("問題または音声の生成に失敗しました。")
+        # ログに詳細を出力して原因を探る
+        st.write(f"関数の戻り値: {result}")
 
 
     # データを取得して再生
