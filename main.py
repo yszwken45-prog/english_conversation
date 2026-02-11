@@ -197,7 +197,7 @@ audio_placeholder = st.empty()
 if st.button("英会話開始"):
     # 問題作成と音声ファイル生成
     st.session_state.problem, audio_path = ft.create_problem_and_play_audio()
-   
+        
     # データを取得して再生
     audio_bytes = ft.get_audio_bytes(audio_path)
     # if audio_bytes:
