@@ -124,41 +124,69 @@ def create_chain(system_template):
 
     return chain
 
-def create_problem_and_play_audio():
+# def create_problem_and_play_audio():
     
-    """
-    問題生成と音声ファイルの再生
-    Args:
-        chain: 問題文生成用のChain
-        speed: 再生速度（1.0が通常速度、0.5で半分の速さ、2.0で倍速など）
-        openai_obj: OpenAIのオブジェクト
-    """
+#     """
+#     問題生成と音声ファイルの再生
+#     Args:
+#         chain: 問題文生成用のChain
+#         speed: 再生速度（1.0が通常速度、0.5で半分の速さ、2.0で倍速など）
+#         openai_obj: OpenAIのオブジェクト
+#     """
 
-    # 問題文を生成するChainを実行し、問題文を取得
+#     # 問題文を生成するChainを実行し、問題文を取得
+#     try:
+#         problem = st.session_state.chain_create_problem.predict(input="")
+
+#     # LLMからの回答を音声データに変換
+#         llm_response_audio = st.session_state.openai_obj.audio.speech.create(
+#             model="tts-1",
+#             voice="alloy",
+#             input=problem
+#         )
+
+#     # 音声ファイルの作成
+#         audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
+#         save_to_wav(llm_response_audio.content, audio_output_file_path)
+
+#     # 音声ファイルの読み上げ
+#         play_wav(audio_output_file_path, st.session_state.speed)
+
+#         return problem, audio_output_file_path
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         # ここで return し忘れると、関数は None を返す
+#         # 代入時に TypeError: cannot unpack non-iterable NoneType object が発生
+#         return None, None  # 回避策：ダミーの値を返す
+def create_problem_and_play_audio():
     try:
+        # 1. 問題生成
         problem = st.session_state.chain_create_problem.predict(input="")
-
-    # LLMからの回答を音声データに変換
+        # 2. 音声データ生成 (TTS)
         llm_response_audio = st.session_state.openai_obj.audio.speech.create(
             model="tts-1",
             voice="alloy",
             input=problem
         )
-
-    # 音声ファイルの作成
-        audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
+        # 3. 音声ファイルの作成（一時ディレクトリを使うのが安全）
+        import os
+        import tempfile        
+        # 保存先を一時フォルダに変更
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
+            audio_output_file_path = fp.name
+            
         save_to_wav(llm_response_audio.content, audio_output_file_path)
 
-    # 音声ファイルの読み上げ
-        play_wav(audio_output_file_path, st.session_state.speed)
+        # --- 重要：play_wav はサーバーで動かないのでコメントアウト ---
+        # play_wav(audio_output_file_path, st.session_state.speed)
 
         return problem, audio_output_file_path
+
     except Exception as e:
-        print(f"Error: {e}")
-        # ここで return し忘れると、関数は None を返す
-        # 代入時に TypeError: cannot unpack non-iterable NoneType object が発生
-        return None, None  # 回避策：ダミーの値を返す
-        
+        # エラー内容を画面に出してデバッグしやすくする
+        st.error(f"詳細エラー: {e}")
+        # None, None ではなく、エラーメッセージと空のパスを返す
+        return f"エラーが発生しました: {e}", ""
 
 
 
