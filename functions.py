@@ -124,53 +124,28 @@ def create_chain(system_template):
 
     return chain
 
-# def create_problem_and_play_audio():
-    
-#     """
-#     問題生成と音声ファイルの再生
-#     Args:
-#         chain: 問題文生成用のChain
-#         speed: 再生速度（1.0が通常速度、0.5で半分の速さ、2.0で倍速など）
-#         openai_obj: OpenAIのオブジェクト
-#     """
-
-#     # 問題文を生成するChainを実行し、問題文を取得
-#     try:
-#         problem = st.session_state.chain_create_problem.predict(input="")
-
-#     # LLMからの回答を音声データに変換
-#         llm_response_audio = st.session_state.openai_obj.audio.speech.create(
-#             model="tts-1",
-#             voice="alloy",
-#             input=problem
-#         )
-
-#     # 音声ファイルの作成
-#         audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
-#         save_to_wav(llm_response_audio.content, audio_output_file_path)
-
-#     # 音声ファイルの読み上げ
-#         play_wav(audio_output_file_path, st.session_state.speed)
-
-#         return problem, audio_output_file_path
-#     except Exception as e:
-#         print(f"Error: {e}")
-#         # ここで return し忘れると、関数は None を返す
-#         # 代入時に TypeError: cannot unpack non-iterable NoneType object が発生
-#         return None, None  # 回避策：ダミーの値を返す
 def create_problem_and_play_audio():
-    try:
-        # 1. 問題生成
-        problem = st.session_state.chain_create_problem.predict(input="")
+    # session_state に chain があるか確認
+    if "chain_create_problem" not in st.session_state:
+        try:
+            # 初期化処理を試みる
+            st.session_state.chain_create_problem = create_chain("問題生成用のテンプレート")
+        except Exception as e:
+            st.error("AIの初期化に失敗しました。ページをリロードしてください。")
+            st.error(f"詳細: {e}")
+            return None, None
 
-        # 2. 音声データ生成
+    try:
+        # 安全に呼び出し
+        problem = st.session_state.chain_create_problem.predict(input="")
+        # 音声データ生成
         llm_response_audio = st.session_state.openai_obj.audio.speech.create(
             model="tts-1",
             voice="alloy",
             input=problem
         )
 
-        # 3. 保存先を一時フォルダに（安全策）
+        # 保存先を一時フォルダに（安全策）
         import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
             audio_output_file_path = fp.name
@@ -188,7 +163,6 @@ def create_problem_and_play_audio():
         st.error(f"関数内でエラーが発生しました: {e}")
         # None, None ではなく、最低限の「文字列」と「空文字」を返す
         return "問題を作成できませんでした。", ""
-
 
 
 def get_audio_bytes(audio_output_file_path):
@@ -265,17 +239,3 @@ def play_wav(audio_output_file_path, speed):
             st.error(f"ファイルが見つかりません: {audio_output_file_path}")
     except Exception as e:
         st.error(f"再生エラー: {e}")
-
-
-# functions.py
-
-def create_problem_and_play_audio():
-    # session_state に chain があるか確認
-    if "chain_create_problem" not in st.session_state:
-        # もし未初期化なら、ここで初期化関数を呼ぶなどして回避する
-        st.error("AIの初期化に失敗しました。ページをリロードしてください。")
-        return None, None
-
-    # 安全に呼び出し
-    problem = st.session_state.chain_create_problem.predict(input="")
-    # ... 以下の処理 ...
