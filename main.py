@@ -230,17 +230,17 @@ if "audio_path" not in st.session_state:
     
         st.write(f"関数の戻り値は: {result} です") # ここで中身を強制表示
     
-    if result is not None:
-        st.session_state.problem, audio_path = result
-        st.write("データを取得しました。再生を試みます。")
+        if result is not None:
+            st.session_state.problem, audio_path = result
+            st.write("データを取得しました。再生を試みます。")
         
-        audio_bytes = ft.get_audio_bytes(audio_path)
-        if audio_bytes:
-            st.audio(audio_bytes, format="audio/wav", autoplay=True)
+            audio_bytes = ft.get_audio_bytes(audio_path)
+            if audio_bytes:
+                st.audio(audio_bytes, format="audio/wav", autoplay=True)
+            else:
+                st.warning("音声バイトデータが空です。")
         else:
-            st.warning("音声バイトデータが空です。")
-    else:
-        st.error("関数が None を返しました。functions.py側で何かが失敗しています。")        
+            st.error("関数が None を返しました。functions.py側で何かが失敗しています。")        
 
 
     # モード：「日常英会話」
