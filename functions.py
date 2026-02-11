@@ -162,31 +162,32 @@ def create_problem_and_play_audio():
     try:
         # 1. 問題生成
         problem = st.session_state.chain_create_problem.predict(input="")
-        # 2. 音声データ生成 (TTS)
+
+        # 2. 音声データ生成
         llm_response_audio = st.session_state.openai_obj.audio.speech.create(
             model="tts-1",
             voice="alloy",
             input=problem
         )
-        # 3. 音声ファイルの作成（一時ディレクトリを使うのが安全）
-        import os
-        import tempfile        
-        # 保存先を一時フォルダに変更
+
+        # 3. 保存先を一時フォルダに（安全策）
+        import tempfile
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
             audio_output_file_path = fp.name
             
+        # 保存実行
         save_to_wav(llm_response_audio.content, audio_output_file_path)
 
-        # --- 重要：play_wav はサーバーで動かないのでコメントアウト ---
+        # --- 重要：サーバー上での直接再生は絶対にエラーになるので消すかコメントアウト ---
         # play_wav(audio_output_file_path, st.session_state.speed)
 
         return problem, audio_output_file_path
 
     except Exception as e:
-        # エラー内容を画面に出してデバッグしやすくする
-        st.error(f"詳細エラー: {e}")
-        # None, None ではなく、エラーメッセージと空のパスを返す
-        return f"エラーが発生しました: {e}", ""
+        # コンソールだけでなく画面にもエラーを出して原因を特定する
+        st.error(f"関数内でエラーが発生しました: {e}")
+        # None, None ではなく、最低限の「文字列」と「空文字」を返す
+        return "問題を作成できませんでした。", ""
 
 
 
