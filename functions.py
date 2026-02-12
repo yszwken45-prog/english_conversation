@@ -3,6 +3,7 @@ import os
 import time
 from pathlib import Path
 import wave
+# import pyaudio
 from pydub import AudioSegment
 from audiorecorder import audiorecorder
 import numpy as np
@@ -17,7 +18,6 @@ from langchain.memory import ConversationSummaryBufferMemory
 from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationChain
 import constants as ct
-import re
 
 def record_audio(audio_input_file_path):
     """
@@ -85,7 +85,7 @@ def play_wav(audio_output_file_path, speed=1.0):
 
     # 音声ファイルの読み込み
     audio = AudioSegment.from_wav(audio_output_file_path)
-
+    
     # 速度を変更
     if speed != 1.0:
         # frame_rateを変更することで速度を調整
@@ -98,11 +98,25 @@ def play_wav(audio_output_file_path, speed=1.0):
 
         modified_audio.export(audio_output_file_path, format="wav")
 
-    # Streamlitのst.audioを使用して再生
-    with open(audio_output_file_path, "rb") as audio_file:
-        audio_bytes = audio_file.read()
-        st.audio(audio_bytes, format="audio/wav")
+    # PyAudioで再生
+    with wave.open(audio_output_file_path, 'rb') as play_target_file:
+        # p = pyaudio.PyAudio()
+        # stream = p.open(
+        #     format=p.get_format_from_width(play_target_file.getsampwidth()),
+        #     channels=play_target_file.getnchannels(),
+        #     rate=play_target_file.getframerate(),
+        #     output=True
+        # )
 
+        data = play_target_file.readframes(1024)
+        while data:
+            # stream.write(data)
+            data = play_target_file.readframes(1024)
+
+        # stream.stop_stream()
+        # stream.close()
+        # p.terminate()
+    
     # LLMからの回答の音声ファイルを削除
     os.remove(audio_output_file_path)
 
@@ -125,54 +139,32 @@ def create_chain(system_template):
     return chain
 
 def create_problem_and_play_audio():
-    # session_state に chain があるか確認
-    if "chain_create_problem" not in st.session_state:
-        try:
-            # 初期化処理を試みる
-            st.session_state.chain_create_problem = create_chain("問題生成用のテンプレート")
-        except Exception as e:
-            st.error("AIの初期化に失敗しました。ページをリロードしてください。")
-            st.error(f"詳細: {e}")
-            return None, None
+    """
+    問題生成と音声ファイルの再生
+    Args:
+        chain: 問題文生成用のChain
+        speed: 再生速度（1.0が通常速度、0.5で半分の速さ、2.0で倍速など）
+        openai_obj: OpenAIのオブジェクト
+    """
 
-    try:
-        # 安全に呼び出し
-        problem = st.session_state.chain_create_problem.predict(input="")
-        # 音声データ生成
-        llm_response_audio = st.session_state.openai_obj.audio.speech.create(
-            model="tts-1",
-            voice="alloy",
-            input=problem
-        )
+    # 問題文を生成するChainを実行し、問題文を取得
+    problem = st.session_state.chain_create_problem.predict(input="")
 
-        # 保存先を一時フォルダに（安全策）
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as fp:
-            audio_output_file_path = fp.name
-            
-        # 保存実行
-        save_to_wav(llm_response_audio.content, audio_output_file_path)
+    # LLMからの回答を音声データに変換
+    llm_response_audio = st.session_state.openai_obj.audio.speech.create(
+        model="tts-1",
+        voice="alloy",
+        input=problem
+    )
 
-        # --- 重要：サーバー上での直接再生は絶対にエラーになるので消すかコメントアウト ---
-        # play_wav(audio_output_file_path, st.session_state.speed)
+    # 音声ファイルの作成
+    audio_output_file_path = f"{ct.AUDIO_OUTPUT_DIR}/audio_output_{int(time.time())}.wav"
+    save_to_wav(llm_response_audio.content, audio_output_file_path)
 
-        return problem, audio_output_file_path
+    # 音声ファイルの読み上げ
+    play_wav(audio_output_file_path, st.session_state.speed)
 
-    except Exception as e:
-        # コンソールだけでなく画面にもエラーを出して原因を特定する
-        st.error(f"関数内でエラーが発生しました: {e}")
-        # None, None ではなく、最低限の「文字列」と「空文字」を返す
-        return "問題を作成できませんでした。", ""
-
-
-def get_audio_bytes(audio_output_file_path):
-    """ファイルからバイナリデータを取得する"""
-    try:
-        with open(audio_output_file_path, "rb") as f:
-            return f.read()
-    except Exception as e:
-        st.error(f"ファイルの読み込みに失敗しました: {e}")
-        return None
+    return problem, llm_response_audio
 
 def create_evaluation():
     """
@@ -182,60 +174,3 @@ def create_evaluation():
     llm_response_evaluation = st.session_state.chain_evaluation.predict(input="")
 
     return llm_response_evaluation
-
-
-
-
-def normalize_text(text):
-    """
-    比較用テキストのクリーニング
-    1. 小文字化
-    2. 文末の記号 (.?!) を削除
-    3. 前後の余計な空白を削除
-    """
-    if not text:
-        return ""
-    text = text.lower()
-    text = re.sub(r'[.\?\!]', '', text) # 記号の削除
-    return text.strip()
-
-def check_answer(user_input, correct_answer):
-    """
-    正規化されたテキストで正誤判定を行う
-    """
-    norm_user = normalize_text(user_input)
-    norm_correct = normalize_text(correct_answer)
-    
-    if norm_user == norm_correct:
-        return True, "Perfect! 正解です！"
-    else:
-        # どのくらい合っているかなどのフィードバックをここに追加可能
-        return False, f"惜しい！ 正解は: {correct_answer}"
-    
-def get_audio_data(response_content):
-    """
-    HttpxBinaryResponseContent から直接バイトデータを取り出す
-    """
-    # response_content が HttpxBinaryResponseContent の場合、.content で取得可能
-    if hasattr(response_content, "content"):
-        return response_content.content
-    return response_content
-
-
-
-def play_wav(audio_output_file_path, speed):
-    # 1. フォルダが存在するか確認し、なければ作成する
-    dir_name = os.path.dirname(audio_output_file_path)
-    if dir_name and not os.path.exists(dir_name):
-        os.makedirs(dir_name)
-
-    # 2. ファイルの読み込みと再生
-    try:
-        if os.path.exists(audio_output_file_path):
-            with open(audio_output_file_path, "rb") as f:
-                audio_bytes = f.read()
-            st.audio(audio_bytes, format="audio/wav", autoplay=True)
-        else:
-            st.error(f"ファイルが見つかりません: {audio_output_file_path}")
-    except Exception as e:
-        st.error(f"再生エラー: {e}")
