@@ -5,6 +5,7 @@ from pathlib import Path
 import wave
 # import pyaudio
 from pydub import AudioSegment
+from pydub.playback import play
 from audiorecorder import audiorecorder
 import numpy as np
 from scipy.io.wavfile import write
@@ -99,19 +100,11 @@ def play_wav(audio_output_file_path, speed=1.0):
         modified_audio.export(audio_output_file_path, format="wav")
 
     # PyAudioで再生
-    with wave.open(audio_output_file_path, 'rb') as play_target_file:
-        # p = pyaudio.PyAudio()
-        # stream = p.open(
-        #     format=p.get_format_from_width(play_target_file.getsampwidth()),
-        #     channels=play_target_file.getnchannels(),
-        #     rate=play_target_file.getframerate(),
-        #     output=True
-        # )
-
-        data = play_target_file.readframes(1024)
-        while data:
-            # stream.write(data)
+        with wave.open(audio_output_file_path, 'rb') as play_target_file:
             data = play_target_file.readframes(1024)
+            while data:
+                # stream.write(data)
+                data = play_target_file.readframes(1024)
 
         # stream.stop_stream()
         # stream.close()
@@ -174,3 +167,30 @@ def create_evaluation():
     llm_response_evaluation = st.session_state.chain_evaluation.predict(input="")
 
     return llm_response_evaluation
+
+def play_audio_with_streamlit():
+    """
+    Streamlitを使用して音声ファイルをアップロードし、再生する関数
+    """
+    st.title("音声ファイルの再生")
+
+    # 音声ファイルのアップロード
+    uploaded_file = st.file_uploader("音声ファイルをアップロードしてください (wav形式)", type=["wav"])
+
+    if uploaded_file is not None:
+        # 一時ファイルに保存
+        temp_audio_path = f"temp_{uploaded_file.name}"
+        with open(temp_audio_path, "wb") as f:
+            f.write(uploaded_file.read())
+
+        # 再生ボタン
+        if st.button("再生"):
+            audio = AudioSegment.from_wav(temp_audio_path)
+            play(audio)
+
+        # 再生後に一時ファイルを削除
+        os.remove(temp_audio_path)
+
+# Streamlitアプリの実行
+if __name__ == "__main__":
+    play_audio_with_streamlit()
