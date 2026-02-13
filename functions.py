@@ -100,18 +100,14 @@ def play_wav(audio_output_file_path, speed=1.0):
         modified_audio.export(audio_output_file_path, format="wav")
 
     # PyAudioで再生
-        with wave.open(audio_output_file_path, 'rb') as play_target_file:
-            data = play_target_file.readframes(1024)
-            while data:
-                # stream.write(data)
-                data = play_target_file.readframes(1024)
-
-        # stream.stop_stream()
-        # stream.close()
-        # p.terminate()
+    with open(audio_output_file_path, "rb") as audio_file:
+        audio_bytes = audio_file.read()
     
-    # LLMからの回答の音声ファイルを削除
-    os.remove(audio_output_file_path)
+    # 画面にオーディオプレイヤーを表示
+    st.audio(audio_bytes, format="audio/wav")
+    
+    # ファイルの削除は st.audio の後に行うか、一時フォルダの管理に注意
+    # os.remove(audio_output_file_path) # ※表示した瞬間に消すとエラーになる場合があるため注意
 
 def create_chain(system_template):
     """
