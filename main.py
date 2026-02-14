@@ -277,22 +277,21 @@ if st.session_state.start_flg:
                     audio_input_text = transcript.text
 
                 # --- 評価処理 ---
-                with st.spinner('評価中...'):
-                    system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
-                        llm_text=st.session_state.problem,
-                        user_text=audio_input_text
-                    )
-                    st.session_state.chain_evaluation = ft.create_chain(system_template)
-                    llm_response_evaluation = ft.create_evaluation()
+                try:
+                    with st.spinner('評価中...'):
+                        system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                            llm_text=st.session_state.problem,
+                            user_text=audio_input_text
+                        )
+                        st.session_state.chain_evaluation = ft.create_chain(system_template)
+                        llm_response_evaluation = ft.create_evaluation()
 
-                # 評価結果の表示
-                with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
-                    st.markdown(llm_response_evaluation)
+                    # 評価結果の表示
+                    with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+                        st.markdown(llm_response_evaluation)
 
-                # メッセージリストへの追加
-                st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
-                st.session_state.messages.append({"role": "user", "content": audio_input_text})
-
-                # フラグ更新を評価処理の後に移動し、rerunを削除
-                st.session_state.shadowing_count += 1
-                st.session_state.shadowing_flg = False
+                    # メッセージリストへの追加
+                    st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
+                    st.session_state.messages.append({"role": "user", "content": audio_input_text})
+                except Exception as e:
+                    st.error(f"評価処理中にエラーが発生しました: {e}")
