@@ -264,7 +264,7 @@ if st.session_state.start_flg:
 
         with st.spinner('評価結果の生成中...'):
             if st.session_state.shadowing_evaluation_first_flg:
-                system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                system_template = ct.SYSTEM_TEMPLATE_EVALUATION_SHADOWING.format(
                     llm_text=st.session_state.problem,
                     user_text=audio_input_text
                 )
