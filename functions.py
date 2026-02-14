@@ -22,7 +22,7 @@ import constants as ct
 
 def record_audio(audio_input_file_path):
     """
-    音声入力を受け取って音声ファイルを作成
+    音声入力を受け取って音声ファイルを作成し、録音データを返す
     """
 
     audio = audiorecorder(
@@ -36,6 +36,7 @@ def record_audio(audio_input_file_path):
 
     if len(audio) > 0:
         audio.export(audio_input_file_path, format="wav")
+        return audio  # 録音データを返す
     else:
         st.stop()
 

@@ -192,7 +192,7 @@ if st.session_state.start_flg:
     if st.session_state.mode == ct.MODE_1:
         # 音声入力を受け取って音声ファイルを作成
         audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-        ft.record_audio(audio_input_file_path)
+        audio_data = ft.record_audio(audio_input_file_path)
 
         # 音声入力ファイルから文字起こしテキストを取得
         with st.spinner('音声入力をテキストに変換中...'):
@@ -250,18 +250,21 @@ if st.session_state.mode == ct.MODE_2:
         st.session_state.shadowing_button_flg = False
 
     # 2. 録音処理（問題が出た後に必ず実行）
-    audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-    ft.record_audio(audio_input_file_path)
+        audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
+        audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
 
     # 3. 文字起こしと評価（録音完了後）
-    with st.spinner('解析中...'):
-        transcript = ft.transcribe_audio(audio_input_file_path)
-        audio_input_text = transcript.text
-        
-        # 評価生成 (省略: 現在のロジックをここに配置)
-        
-        # カウントアップ
-        st.session_state.shadowing_count += 1
-        st.session_state.shadowing_flg = True # これで「シャドーイング開始」ボタンが画面に出る
-        
-        st.rerun() # 結果を表示するためにリロード
+    if len(audio_data) > 0:
+    # 録音データがある場合のみ、以下の解析処理を実行する
+        with st.spinner('解析中...'):
+            audio_data.export(audio_input_file_path, format="wav")
+            transcript = ft.transcribe_audio(audio_input_file_path)
+            audio_input_text = transcript.text
+            
+            # --- ここでメッセージ追加や評価の処理 ---
+            
+            st.session_state.shadowing_count += 1
+            st.rerun() # 解析が終わったときだけリランする
+    else:
+        # 録音データがない間は、ここで処理を止める（解析中へ進ませない）
+        st.stop()
