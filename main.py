@@ -264,8 +264,8 @@ if st.session_state.mode == ct.MODE_2:
             st.error(f"録音中にエラーが発生しました: {e}")
             st.stop()
 
-        if audio_data is None:
-            st.error("録音データが取得できませんでした。再試行してください。")
+        if audio_data is None or len(audio_data) == 0:
+            st.warning("有効な音声がありません。再録音をお願いします。")
             st.stop()
 
         st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
