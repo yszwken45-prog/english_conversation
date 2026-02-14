@@ -271,20 +271,16 @@ if st.session_state.start_flg:
 
         # 3. 文字起こしと評価（終了ボタン押下時）
             if st.button("終了"):
-                with st.spinner('解析中...'):
-                    audio_data.export(audio_input_file_path, format="wav")
-                    transcript = ft.transcribe_audio(audio_input_file_path)
-                    audio_input_text = transcript.text
-
-                # --- 評価処理 ---
-                try:
-                    with st.spinner('評価中...'):
+                with st.spinner('評価結果の生成中...'):
+                    if st.session_state.shadowing_evaluation_first_flg:
                         system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
                             llm_text=st.session_state.problem,
                             user_text=audio_input_text
                         )
                         st.session_state.chain_evaluation = ft.create_chain(system_template)
-                        llm_response_evaluation = ft.create_evaluation()
+                        st.session_state.shadowing_evaluation_first_flg = False
+                    # 問題文と回答を比較し、評価結果の生成を指示するプロンプトを作成
+                    llm_response_evaluation = ft.create_evaluation()
 
                    
                     # 評価結果のメッセージリストへの追加と表示
@@ -296,5 +292,5 @@ if st.session_state.start_flg:
                     # メッセージリストへの追加
                     st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
                     st.session_state.messages.append({"role": "user", "content": audio_input_text})
-                except Exception as e:
-                    st.error(f"評価処理中にエラーが発生しました: {e}")
+            # except Exception as e:
+            #     st.error(f"評価処理中にエラーが発生しました: {e}")
