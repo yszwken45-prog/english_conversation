@@ -271,8 +271,7 @@ if st.session_state.mode == ct.MODE_2:
         st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
     # 3. 文字起こしと評価（録音完了後）
-    if audio_data and len(audio_data) > 0:
-        # 録音データがある場合のみ、以下の解析処理を実行する
+
         with st.spinner('解析中...'):
             audio_data.export(audio_input_file_path, format="wav")
             transcript = ft.transcribe_audio(audio_input_file_path)
