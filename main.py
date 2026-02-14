@@ -239,14 +239,18 @@ if st.session_state.mode == ct.MODE_2:
         
         # 1. 問題生成と再生
         if st.session_state.shadowing_first_flg:
-            audio_data = []
             st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
             st.session_state.shadowing_first_flg = False
-        
+
         with st.spinner('問題文生成中...'):
-            # ft.create_problem_and_play_audio() 内で st.audio を使うよう修正済みであること
-            st.session_state.problem, _ = ft.create_problem_and_play_audio()
-        
+            st.session_state.problem, audio_output_file_path = ft.create_problem_and_play_audio()
+
+        # 音声ファイルの再生確認
+        if audio_output_file_path:
+            st.audio(audio_output_file_path, format="audio/wav")  # Streamlitで音声を再生
+        else:
+            st.error("音声ファイルの生成に失敗しました。再試行してください。")
+
         # ボタンフラグをリセット（重要）
         st.session_state.shadowing_button_flg = False
 
