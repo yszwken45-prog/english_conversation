@@ -270,7 +270,21 @@ if st.session_state.start_flg:
             # st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
         # 3. 文字起こしと評価（終了ボタン押下時）
-            if st.button("終了"):
+            if st.button("終了"):                
+                with st.spinner('音声入力をテキストに変換中...'):
+                    # 音声入力ファイルから文字起こしテキストを取得
+                    transcript = ft.transcribe_audio(audio_input_file_path)
+                    audio_input_text = transcript.text
+
+                # AIメッセージとユーザーメッセージの画面表示
+                with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+                    st.markdown(st.session_state.problem)
+                with st.chat_message("user", avatar=ct.USER_ICON_PATH):
+                    st.markdown(audio_input_text)
+                
+                # LLMが生成した問題文と音声入力値をメッセージリストに追加
+                st.session_state.messages.append({"role": "assistant", "content": st.session_state.problem})
+                st.session_state.messages.append({"role": "user", "content": audio_input_text})
                 with st.spinner('評価結果の生成中...'):
                     if st.session_state.shadowing_evaluation_first_flg:
                         system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
