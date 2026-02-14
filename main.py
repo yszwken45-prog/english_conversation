@@ -239,6 +239,7 @@ if st.session_state.mode == ct.MODE_2:
         
         # 1. 問題生成と再生
         if st.session_state.shadowing_first_flg:
+            audio_data = []
             st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
             st.session_state.shadowing_first_flg = False
         
