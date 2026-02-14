@@ -267,7 +267,7 @@ if st.session_state.start_flg:
                 st.warning("有効な音声がありません。再録音をお願いします。")
                 st.stop()
 
-            st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
+            # st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
         # 3. 文字起こしと評価（終了ボタン押下時）
             if st.button("終了"):
