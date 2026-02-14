@@ -147,7 +147,7 @@ if st.session_state.start_flg:
 
             st.session_state.chat_open_flg = True
             st.session_state.dictation_flg = False
-            st.rerun()
+    
         # チャット入力時の処理
         else:
             # チャット欄から入力された場合にのみ評価処理が実行されるようにする
