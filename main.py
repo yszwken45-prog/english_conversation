@@ -242,17 +242,16 @@ if st.session_state.mode == ct.MODE_2:
             st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
             st.session_state.shadowing_first_flg = False
 
-        with st.spinner('問題文生成中...'):
-            st.session_state.problem, audio_output_file_path = ft.create_problem_and_play_audio()
+        # 音声再生とテキスト表示
+        with st.spinner('音声再生中...'):
+            st.session_state.problem, llm_response_audio = ft.create_problem_and_play_audio()
 
-        # 音声ファイルの再生確認
-        if audio_output_file_path and os.path.exists(audio_output_file_path):
-            st.audio(audio_output_file_path, format="audio/wav")  # Streamlitで音声を再生
-        else:
-            st.error("音声ファイルの生成または再生に失敗しました。ファイルが存在しない可能性があります。再試行してください。")
+        with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+            st.markdown(st.session_state.problem)
 
-        # ボタンフラグをリセット（重要）
-        st.session_state.shadowing_button_flg = False
+        # フラグ更新
+        st.session_state.shadowing_flg = True
+        st.session_state.shadowing_count += 1
 
     # 2. 録音処理（問題が出た後に必ず実行）
         audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
