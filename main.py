@@ -246,10 +246,10 @@ if st.session_state.mode == ct.MODE_2:
             st.session_state.problem, audio_output_file_path = ft.create_problem_and_play_audio()
 
         # 音声ファイルの再生確認
-        if audio_output_file_path:
+        if audio_output_file_path and os.path.exists(audio_output_file_path):
             st.audio(audio_output_file_path, format="audio/wav")  # Streamlitで音声を再生
         else:
-            st.error("音声ファイルの生成に失敗しました。再試行してください。")
+            st.error("音声ファイルの生成または再生に失敗しました。ファイルが存在しない可能性があります。再試行してください。")
 
         # ボタンフラグをリセット（重要）
         st.session_state.shadowing_button_flg = False

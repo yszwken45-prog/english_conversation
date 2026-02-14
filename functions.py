@@ -86,8 +86,12 @@ def play_wav(audio_output_file_path, speed=1.0):
     """
 
     # 音声ファイルの読み込み
+    if not os.path.exists(audio_output_file_path):
+        st.error("音声ファイルが存在しません。再試行してください。")
+        return
+
     audio = AudioSegment.from_wav(audio_output_file_path)
-    
+
     # 速度を変更
     if speed != 1.0:
         # frame_rateを変更することで速度を調整
@@ -98,17 +102,19 @@ def play_wav(audio_output_file_path, speed=1.0):
         # 元のframe_rateに戻すことで正常再生させる（ピッチを保持したまま速度だけ変更）
         modified_audio = modified_audio.set_frame_rate(audio.frame_rate)
 
-        modified_audio.export(audio_output_file_path, format="wav")
+        # 一時ファイルに保存
+        temp_audio_path = f"temp_{int(time.time())}.wav"
+        modified_audio.export(temp_audio_path, format="wav")
+        audio_output_file_path = temp_audio_path
 
-    # PyAudioで再生
+    # Streamlitで音声を再生
     with open(audio_output_file_path, "rb") as audio_file:
         audio_bytes = audio_file.read()
-    
-    # 画面にオーディオプレイヤーを表示
-    st.audio(audio_bytes, format="audio/wav")
-    
-    # ファイルの削除は st.audio の後に行うか、一時フォルダの管理に注意
-    # os.remove(audio_output_file_path) # ※表示した瞬間に消すとエラーになる場合があるため注意
+        st.audio(audio_bytes, format="audio/wav")
+
+    # 一時ファイルの削除
+    if "temp_" in audio_output_file_path:
+        os.remove(audio_output_file_path)
 
 def create_chain(system_template):
     """
