@@ -257,15 +257,15 @@ if st.session_state.start_flg:
             audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
             # audio_data = None  # audio_dataを初期化
 
-            try:
-                audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
-            except Exception as e:
-                st.error(f"録音中にエラーが発生しました: {e}")
-                st.stop()
+            # try:
+            audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
+            # except Exception as e:
+            #     st.error(f"録音中にエラーが発生しました: {e}")
+            #     st.stop()
 
-            if audio_data is None or len(audio_data) == 0:
-                st.warning("有効な音声がありません。再録音をお願いします。")
-                st.stop()
+            # if audio_data is None or len(audio_data) == 0:
+            #     st.warning("有効な音声がありません。再録音をお願いします。")
+            #     st.stop()
 
             # st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
