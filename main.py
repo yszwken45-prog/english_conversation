@@ -233,53 +233,53 @@ if st.session_state.start_flg:
     # モード：「シャドーイング」
     # 「シャドーイング」ボタン押下時か、「英会話開始」ボタン押下時
     # モード：「シャドーイング」
-if st.session_state.mode == ct.MODE_2:
+    if st.session_state.mode == ct.MODE_2:
     # 最初の1回目、または「次へ」ボタン（shadowing_button_flg）が押された場合
-    if st.session_state.shadowing_count == 0 or st.session_state.shadowing_button_flg:
-        
-        # 1. 問題生成と再生
-        if st.session_state.shadowing_first_flg:
-            st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
-            st.session_state.shadowing_first_flg = False
+        if st.session_state.shadowing_count == 0 or st.session_state.shadowing_button_flg:
+            
+            # 1. 問題生成と再生
+            if st.session_state.shadowing_first_flg:
+                st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
+                st.session_state.shadowing_first_flg = False
 
-        # 音声再生とテキスト表示
-        with st.spinner('音声再生中...'):
-            st.session_state.problem, llm_response_audio = ft.create_problem_and_play_audio()
+            # 音声再生とテキスト表示
+            with st.spinner('音声再生中...'):
+                st.session_state.problem, llm_response_audio = ft.create_problem_and_play_audio()
 
-        with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
-            st.markdown(st.session_state.problem)
+            with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+                st.markdown(st.session_state.problem)
 
-        # フラグ更新
-        st.session_state.shadowing_flg = True
-        st.session_state.shadowing_count += 1
-
-    # 2. 録音処理（問題が出た後に必ず実行）
-        audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-        audio_data = None  # audio_dataを初期化
-
-        try:
-            audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
-        except Exception as e:
-            st.error(f"録音中にエラーが発生しました: {e}")
-            st.stop()
-
-        if audio_data is None or len(audio_data) == 0:
-            st.warning("有効な音声がありません。再録音をお願いします。")
-            st.stop()
-
-        st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
-
-    # 3. 文字起こしと評価（録音完了後）
-
-        with st.spinner('解析中...'):
-            audio_data.export(audio_input_file_path, format="wav")
-            transcript = ft.transcribe_audio(audio_input_file_path)
-            audio_input_text = transcript.text
-
-            # --- ここでメッセージ追加や評価の処理 ---
-
+            # フラグ更新
+            st.session_state.shadowing_flg = True
             st.session_state.shadowing_count += 1
-            st.rerun()  # 解析が終わったときだけリランする
-    else:
-        # 録音データがない間は、ここで処理を止める（解析中へ進ませない）
-        st.stop()
+
+        # 2. 録音処理（問題が出た後に必ず実行）
+            audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
+            audio_data = None  # audio_dataを初期化
+
+            try:
+                audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
+            except Exception as e:
+                st.error(f"録音中にエラーが発生しました: {e}")
+                st.stop()
+
+            if audio_data is None or len(audio_data) == 0:
+                st.warning("有効な音声がありません。再録音をお願いします。")
+                st.stop()
+
+            st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
+
+        # 3. 文字起こしと評価（録音完了後）
+
+            with st.spinner('解析中...'):
+                audio_data.export(audio_input_file_path, format="wav")
+                transcript = ft.transcribe_audio(audio_input_file_path)
+                audio_input_text = transcript.text
+
+                # --- ここでメッセージ追加や評価の処理 ---
+
+                st.session_state.shadowing_count += 1
+                st.rerun()  # 解析が終わったときだけリランする
+        else:
+            # 録音データがない間は、ここで処理を止める（解析中へ進ませない）
+            st.stop()
