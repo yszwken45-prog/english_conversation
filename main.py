@@ -253,6 +253,11 @@ if st.session_state.mode == ct.MODE_2:
     # 2. 録音処理（問題が出た後に必ず実行）
         audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
         audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
+
+        if audio_data is None:
+            st.error("録音データが取得できませんでした。再試行してください。")
+            st.stop()
+
         st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
     # 3. 文字起こしと評価（録音完了後）
