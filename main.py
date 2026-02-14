@@ -286,9 +286,12 @@ if st.session_state.start_flg:
                         st.session_state.chain_evaluation = ft.create_chain(system_template)
                         llm_response_evaluation = ft.create_evaluation()
 
-                    # 評価結果の表示
+                   
+                    # 評価結果のメッセージリストへの追加と表示
                     with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
                         st.markdown(llm_response_evaluation)
+                    st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
+                    st.session_state.messages.append({"role": "other"})
 
                     # メッセージリストへの追加
                     st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
