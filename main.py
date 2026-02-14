@@ -261,17 +261,17 @@ if st.session_state.mode == ct.MODE_2:
         st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
     # 3. 文字起こしと評価（録音完了後）
-    if len(audio_data) > 0:
-    # 録音データがある場合のみ、以下の解析処理を実行する
+    if audio_data and len(audio_data) > 0:
+        # 録音データがある場合のみ、以下の解析処理を実行する
         with st.spinner('解析中...'):
             audio_data.export(audio_input_file_path, format="wav")
             transcript = ft.transcribe_audio(audio_input_file_path)
             audio_input_text = transcript.text
-            
+
             # --- ここでメッセージ追加や評価の処理 ---
-            
+
             st.session_state.shadowing_count += 1
-            st.rerun() # 解析が終わったときだけリランする
+            st.rerun()  # 解析が終わったときだけリランする
     else:
         # 録音データがない間は、ここで処理を止める（解析中へ進ませない）
         st.stop()
