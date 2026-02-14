@@ -232,79 +232,58 @@ if st.session_state.start_flg:
 
     # モード：「シャドーイング」
     # 「シャドーイング」ボタン押下時か、「英会話開始」ボタン押下時
-    # モード：「シャドーイング」
-    if st.session_state.mode == ct.MODE_2:
-    # 最初の1回目、または「次へ」ボタン（shadowing_button_flg）が押された場合
-        if st.session_state.shadowing_count == 0 or st.session_state.shadowing_button_flg:
-            
-            # 1. 問題生成と再生
-            if st.session_state.shadowing_first_flg:
-                st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
-                st.session_state.shadowing_first_flg = False
-
-            # 音声再生とテキスト表示
-            with st.spinner('音声再生中...'):
+    if st.session_state.mode == ct.MODE_2 and (st.session_state.shadowing_button_flg or st.session_state.shadowing_count == 0 or st.session_state.shadowing_audio_input_flg):
+        if st.session_state.shadowing_first_flg:
+            st.session_state.chain_create_problem = ft.create_chain(ct.SYSTEM_TEMPLATE_CREATE_PROBLEM)
+            st.session_state.shadowing_first_flg = False
+        
+        if not st.session_state.shadowing_audio_input_flg:
+            with st.spinner('問題文生成中...'):
                 st.session_state.problem, llm_response_audio = ft.create_problem_and_play_audio()
 
-            with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
-                st.markdown(st.session_state.problem)
+        # 音声入力を受け取って音声ファイルを作成
+        st.session_state.shadowing_audio_input_flg = True
+        audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
+        ft.record_audio(audio_input_file_path)
+        st.session_state.shadowing_audio_input_flg = False
 
-            # フラグ更新
-            st.session_state.shadowing_flg = True
-            st.session_state.shadowing_count += 1
+        with st.spinner('音声入力をテキストに変換中...'):
+            # 音声入力ファイルから文字起こしテキストを取得
+            transcript = ft.transcribe_audio(audio_input_file_path)
+            audio_input_text = transcript.text
 
-        # 2. 録音処理（問題が出た後に必ず実行）
-            audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-            # audio_data = None  # audio_dataを初期化
+        # AIメッセージとユーザーメッセージの画面表示
+        with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+            st.markdown(st.session_state.problem)
+        with st.chat_message("user", avatar=ct.USER_ICON_PATH):
+            st.markdown(audio_input_text)
+        
+        # LLMが生成した問題文と音声入力値をメッセージリストに追加
+        st.session_state.messages.append({"role": "assistant", "content": st.session_state.problem})
+        st.session_state.messages.append({"role": "user", "content": audio_input_text})
 
-            # try:
-            audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
-            # except Exception as e:
-            #     st.error(f"録音中にエラーが発生しました: {e}")
-            #     st.stop()
+        with st.spinner('評価結果の生成中...'):
+            if st.session_state.shadowing_evaluation_first_flg:
+                system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                    llm_text=st.session_state.problem,
+                    user_text=audio_input_text
+                )
+                st.session_state.chain_evaluation = ft.create_chain(system_template)
+                st.session_state.shadowing_evaluation_first_flg = False
+            # 問題文と回答を比較し、評価結果の生成を指示するプロンプトを作成
+            llm_response_evaluation = ft.create_evaluation()
+        
+        # 評価結果のメッセージリストへの追加と表示
+        with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+            st.markdown(llm_response_evaluation)
+        st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
+        st.session_state.messages.append({"role": "other"})
+        
+        # 各種フラグの更新
+        st.session_state.shadowing_flg = True
+        st.session_state.shadowing_count += 1
 
-            # if audio_data is None or len(audio_data) == 0:
-            #     st.warning("有効な音声がありません。再録音をお願いします。")
-            #     st.stop()
+        # 「シャドーイング」ボタンを表示するために再描画
+        st.rerun()    # モード：「シャドーイング」
 
-            # st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
-
-        # 3. 文字起こしと評価（終了ボタン押下時）
-            if st.button("終了"):                
-                with st.spinner('音声入力をテキストに変換中...'):
-                    # 音声入力ファイルから文字起こしテキストを取得
-                    transcript = ft.transcribe_audio(audio_input_file_path)
-                    audio_input_text = transcript.text
-
-                # AIメッセージとユーザーメッセージの画面表示
-                with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
-                    st.markdown(st.session_state.problem)
-                with st.chat_message("user", avatar=ct.USER_ICON_PATH):
-                    st.markdown(audio_input_text)
-                
-                # LLMが生成した問題文と音声入力値をメッセージリストに追加
-                st.session_state.messages.append({"role": "assistant", "content": st.session_state.problem})
-                st.session_state.messages.append({"role": "user", "content": audio_input_text})
-                with st.spinner('評価結果の生成中...'):
-                    if st.session_state.shadowing_evaluation_first_flg:
-                        system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
-                            llm_text=st.session_state.problem,
-                            user_text=audio_input_text
-                        )
-                        st.session_state.chain_evaluation = ft.create_chain(system_template)
-                        st.session_state.shadowing_evaluation_first_flg = False
-                    # 問題文と回答を比較し、評価結果の生成を指示するプロンプトを作成
-                    llm_response_evaluation = ft.create_evaluation()
-
-                   
-                    # 評価結果のメッセージリストへの追加と表示
-                    with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
-                        st.markdown(llm_response_evaluation)
-                    st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
-                    st.session_state.messages.append({"role": "other"})
-
-                    # メッセージリストへの追加
-                    st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
-                    st.session_state.messages.append({"role": "user", "content": audio_input_text})
-            # except Exception as e:
-            #     st.error(f"評価処理中にエラーが発生しました: {e}")
+              
