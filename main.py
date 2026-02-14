@@ -255,7 +255,7 @@ if st.session_state.start_flg:
 
         # 2. 録音処理（問題が出た後に必ず実行）
             audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-            audio_data = None  # audio_dataを初期化
+            # audio_data = None  # audio_dataを初期化
 
             try:
                 audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
