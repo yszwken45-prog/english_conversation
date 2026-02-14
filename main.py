@@ -252,7 +252,13 @@ if st.session_state.mode == ct.MODE_2:
 
     # 2. 録音処理（問題が出た後に必ず実行）
         audio_input_file_path = f"{ct.AUDIO_INPUT_DIR}/audio_input_{int(time.time())}.wav"
-        audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
+        audio_data = None  # audio_dataを初期化
+
+        try:
+            audio_data = ft.record_audio(audio_input_file_path)  # 録音データを取得
+        except Exception as e:
+            st.error(f"録音中にエラーが発生しました: {e}")
+            st.stop()
 
         if audio_data is None:
             st.error("録音データが取得できませんでした。再試行してください。")
