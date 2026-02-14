@@ -269,11 +269,12 @@ if st.session_state.start_flg:
 
             st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
-        # 3. 文字起こしと評価（録音完了後）
-            with st.spinner('解析中...'):
-                audio_data.export(audio_input_file_path, format="wav")
-                transcript = ft.transcribe_audio(audio_input_file_path)
-                audio_input_text = transcript.text
+        # 3. 文字起こしと評価（終了ボタン押下時）
+            if st.button("終了"):
+                with st.spinner('解析中...'):
+                    audio_data.export(audio_input_file_path, format="wav")
+                    transcript = ft.transcribe_audio(audio_input_file_path)
+                    audio_input_text = transcript.text
 
                 # --- 評価処理 ---
                 with st.spinner('評価中...'):
