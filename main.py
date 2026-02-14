@@ -270,16 +270,32 @@ if st.session_state.start_flg:
             st.write(f"デバッグ用：データ取得状況 = {type(audio_data)}")
 
         # 3. 文字起こしと評価（録音完了後）
-
             with st.spinner('解析中...'):
                 audio_data.export(audio_input_file_path, format="wav")
                 transcript = ft.transcribe_audio(audio_input_file_path)
                 audio_input_text = transcript.text
 
-                # --- ここでメッセージ追加や評価の処理 ---
+                # --- 評価処理 ---
+                with st.spinner('評価中...'):
+                    system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
+                        llm_text=st.session_state.problem,
+                        user_text=audio_input_text
+                    )
+                    st.session_state.chain_evaluation = ft.create_chain(system_template)
+                    llm_response_evaluation = ft.create_evaluation()
 
+                # 評価結果の表示
+                with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
+                    st.markdown(llm_response_evaluation)
+
+                # メッセージリストへの追加
+                st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
+                st.session_state.messages.append({"role": "user", "content": audio_input_text})
+
+                # フラグ更新
                 st.session_state.shadowing_count += 1
-                st.rerun()  # 解析が終わったときだけリランする
+                st.session_state.shadowing_flg = False
+                st.rerun()
         else:
             # 録音データがない間は、ここで処理を止める（解析中へ進ませない）
             st.stop()
