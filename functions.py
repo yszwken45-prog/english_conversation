@@ -137,12 +137,7 @@ def create_chain(system_template):
 def create_problem_and_play_audio():
     """
     問題生成と音声ファイルの再生
-    Args:
-        chain: 問題文生成用のChain
-        speed: 再生速度（1.0が通常速度、0.5で半分の速さ、2.0で倍速など）
-        openai_obj: OpenAIのオブジェクト
     """
-
     # 問題文を生成するChainを実行し、問題文を取得
     problem = st.session_state.chain_create_problem.predict(input="")
 
@@ -158,9 +153,15 @@ def create_problem_and_play_audio():
     save_to_wav(llm_response_audio.content, audio_output_file_path)
 
     # 音声ファイルの読み上げ
-    play_wav(audio_output_file_path, st.session_state.speed)
+    if os.path.exists(audio_output_file_path):
+        play_wav(audio_output_file_path, st.session_state.speed)
+        
+        # 音声再生後に案内メッセージを表示
+        st.info("AIが読み上げた音声を、画面下部のチャット欄からそのまま入力・送信してください。")
+    else:
+        st.error("音声ファイルの生成に失敗しました。再試行してください。")
 
-    return problem, llm_response_audio
+    return problem, audio_output_file_path
 
 def create_evaluation():
     """
