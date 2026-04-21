@@ -3,6 +3,7 @@ import os
 import time
 from time import sleep
 from pathlib import Path
+from datetime import date
 from streamlit.components.v1 import html
 from langchain.memory import ConversationSummaryBufferMemory
 from langchain.chains import ConversationChain
@@ -17,6 +18,8 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import functions as ft
 import constants as ct
+import database
+import auth
 
 
 # 各種設定
@@ -25,12 +28,103 @@ st.set_page_config(
     page_title=ct.APP_NAME
 )
 
+# DB初期化
+database.init_db()
+
+# ログイン状態の初期化
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_id = None
+    st.session_state.username = ""
+
+# ─── ログイン画面 ───────────────────────────────────────────
+if not st.session_state.logged_in:
+    st.markdown(f"## {ct.APP_NAME}")
+    st.markdown("### ログイン / 新規登録")
+    tab_login, tab_register = st.tabs(["ログイン", "新規登録"])
+
+    with tab_login:
+        login_username = st.text_input("ユーザー名", key="login_username")
+        login_password = st.text_input("パスワード", type="password", key="login_password")
+        if st.button("ログイン", type="primary", key="btn_login"):
+            user_id = auth.verify_user(login_username, login_password)
+            if user_id:
+                st.session_state.logged_in = True
+                st.session_state.user_id = user_id
+                st.session_state.username = login_username
+                st.rerun()
+            else:
+                st.error("ユーザー名またはパスワードが正しくありません")
+
+    with tab_register:
+        reg_username = st.text_input("ユーザー名（2文字以上）", key="reg_username")
+        reg_password = st.text_input("パスワード（6文字以上）", type="password", key="reg_password")
+        reg_password2 = st.text_input("パスワード（確認）", type="password", key="reg_password2")
+        if st.button("登録", type="primary", key="btn_register"):
+            if reg_password != reg_password2:
+                st.error("パスワードが一致しません")
+            elif len(reg_username) < 2:
+                st.error("ユーザー名は2文字以上で入力してください")
+            elif len(reg_password) < 6:
+                st.error("パスワードは6文字以上で入力してください")
+            elif auth.register_user(reg_username, reg_password):
+                st.success("登録が完了しました。「ログイン」タブからログインしてください。")
+            else:
+                st.error("このユーザー名はすでに使用されています")
+
+    st.stop()
+
+# ─── サイドバー（ログイン済み） ──────────────────────────────
+with st.sidebar:
+    st.markdown(f"### ようこそ、{st.session_state.username} さん")
+    if st.button("ログアウト", key="btn_logout"):
+        for k in list(st.session_state.keys()):
+            del st.session_state[k]
+        st.rerun()
+
+    st.divider()
+    st.markdown("### 学習履歴")
+    session_dates = database.get_session_dates(st.session_state.user_id)
+    if session_dates:
+        selected_date = st.selectbox("日付", session_dates, label_visibility="collapsed")
+        if st.button("この日の履歴を表示", key="btn_show_history"):
+            st.session_state.history_to_show = selected_date
+
+        if st.session_state.get("history_to_show"):
+            hist_msgs = database.load_messages_by_date(
+                st.session_state.user_id, st.session_state.history_to_show
+            )
+            with st.expander(f"{st.session_state.history_to_show} の記録", expanded=True):
+                for m in hist_msgs:
+                    if m["role"] == "assistant":
+                        st.markdown(f"**AI:** {m['content']}")
+                    elif m["role"] == "user":
+                        st.markdown(f"**あなた:** {m['content']}")
+                    else:
+                        st.markdown("---")
+    else:
+        st.info("まだ履歴がありません")
+
+
+def _append_and_save(role: str, content: str = ""):
+    """メッセージをsession_stateとDBの両方に追加する"""
+    msg = {"role": role, "content": content} if role != "other" else {"role": "other"}
+    st.session_state.messages.append(msg)
+    database.save_message(
+        st.session_state.user_id,
+        st.session_state.session_date,
+        role,
+        content,
+        st.session_state.get("mode", "")
+    )
+
+
 # タイトル表示
 st.markdown(f"## {ct.APP_NAME}")
 
 # 初期処理
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.session_date = str(date.today())
     st.session_state.start_flg = False
     st.session_state.pre_mode = ""
     st.session_state.shadowing_flg = False
@@ -47,7 +141,7 @@ if "messages" not in st.session_state:
     st.session_state.dictation_evaluation_first_flg = True
     st.session_state.chat_open_flg = False
     st.session_state.problem = ""
-    
+
     st.session_state.openai_obj = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     st.session_state.llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.5)
     st.session_state.memory = ConversationSummaryBufferMemory(
@@ -58,6 +152,14 @@ if "messages" not in st.session_state:
 
     # モード「日常英会話」用のChain作成
     st.session_state.chain_basic_conversation = ft.create_chain(ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION)
+
+    # 今日の履歴をDBから読み込む
+    today_history = database.load_messages_by_date(st.session_state.user_id, st.session_state.session_date)
+    st.session_state.messages = [
+        {"role": m["role"], "content": m["content"]} if m["role"] != "other"
+        else {"role": "other"}
+        for m in today_history
+    ]
 
 # 初期表示
 # col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
@@ -161,8 +263,8 @@ if st.session_state.start_flg:
                 st.markdown(st.session_state.dictation_chat_message)
 
             # LLMが生成した問題文とチャット入力値をメッセージリストに追加
-            st.session_state.messages.append({"role": "assistant", "content": st.session_state.problem})
-            st.session_state.messages.append({"role": "user", "content": st.session_state.dictation_chat_message})
+            _append_and_save("assistant", st.session_state.problem)
+            _append_and_save("user", st.session_state.dictation_chat_message)
             
             with st.spinner('評価結果の生成中...'):
                 system_template = ct.SYSTEM_TEMPLATE_EVALUATION.format(
@@ -176,9 +278,9 @@ if st.session_state.start_flg:
             # 評価結果のメッセージリストへの追加と表示
             with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
                 st.markdown(llm_response_evaluation)
-            st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
-            st.session_state.messages.append({"role": "other"})
-            
+            _append_and_save("assistant", llm_response_evaluation)
+            _append_and_save("other")
+
             # 各種フラグの更新
             st.session_state.dictation_flg = True
             st.session_state.dictation_chat_message = ""
@@ -226,8 +328,8 @@ if st.session_state.start_flg:
             st.markdown(llm_response)
 
         # ユーザー入力値とLLMからの回答をメッセージ一覧に追加
-        st.session_state.messages.append({"role": "user", "content": audio_input_text})
-        st.session_state.messages.append({"role": "assistant", "content": llm_response})
+        _append_and_save("user", audio_input_text)
+        _append_and_save("assistant", llm_response)
 
 
     # モード：「シャドーイング」
@@ -259,8 +361,8 @@ if st.session_state.start_flg:
             st.markdown(audio_input_text)
         
         # LLMが生成した問題文と音声入力値をメッセージリストに追加
-        st.session_state.messages.append({"role": "assistant", "content": st.session_state.problem})
-        st.session_state.messages.append({"role": "user", "content": audio_input_text})
+        _append_and_save("assistant", st.session_state.problem)
+        _append_and_save("user", audio_input_text)
 
         with st.spinner('評価結果の生成中...'):
             if st.session_state.shadowing_evaluation_first_flg:
@@ -276,9 +378,9 @@ if st.session_state.start_flg:
         # 評価結果のメッセージリストへの追加と表示
         with st.chat_message("assistant", avatar=ct.AI_ICON_PATH):
             st.markdown(llm_response_evaluation)
-        st.session_state.messages.append({"role": "assistant", "content": llm_response_evaluation})
-        st.session_state.messages.append({"role": "other"})
-        
+        _append_and_save("assistant", llm_response_evaluation)
+        _append_and_save("other")
+
         # 各種フラグの更新
         st.session_state.shadowing_flg = True
         st.session_state.shadowing_count += 1
