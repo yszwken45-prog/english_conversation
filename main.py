@@ -1,6 +1,8 @@
 import streamlit as st
 import os
 import time
+import logging
+from logging.handlers import RotatingFileHandler
 from time import sleep
 from pathlib import Path
 from datetime import date
@@ -21,6 +23,15 @@ import constants as ct
 import database
 import auth
 
+
+# ログ設定
+os.makedirs("logs", exist_ok=True)
+_log_handler = RotatingFileHandler(
+    "logs/app.log", maxBytes=1_000_000, backupCount=5, encoding="utf-8"
+)
+_log_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+logging.getLogger().addHandler(_log_handler)
+logging.getLogger().setLevel(logging.WARNING)
 
 # 各種設定
 load_dotenv()

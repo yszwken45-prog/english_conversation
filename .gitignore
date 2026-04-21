@@ -64,6 +64,9 @@ db.sqlite3-journal
 # App database
 app_data.db
 
+# Logs
+logs/
+
 # Flask stuff:
 instance/
 .webassets-cache
