@@ -131,6 +131,15 @@ def get_daily_activity(user_id: int, days: int = 30) -> list:
     return [(row["session_date"], row["cnt"]) for row in rows]
 
 
+def delete_user(user_id: int):
+    conn = get_db_connection()
+    conn.execute("DELETE FROM conversation_history WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
 def get_all_users_stats() -> list:
     conn = get_db_connection()
     rows = conn.execute(

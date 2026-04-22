@@ -229,9 +229,18 @@ def _render_admin():
     st.divider()
     st.markdown("#### ユーザー一覧")
     if users:
-        df = pd.DataFrame(users)[["username", "created_at", "message_count", "session_days"]]
-        df.columns = ["ユーザー名", "登録日時", "総会話数", "学習日数"]
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        for u in users:
+            col_name, col_info, col_del = st.columns([2, 4, 1])
+            with col_name:
+                st.write(u["username"])
+            with col_info:
+                st.caption(f"登録: {u['created_at'][:10]}　会話: {u['message_count']}回　学習: {u['session_days']}日")
+            with col_del:
+                if u["username"] != st.session_state.username:
+                    if st.button("削除", key=f"del_{u['id']}", type="secondary"):
+                        database.delete_user(u["id"])
+                        st.success(f"{u['username']} を削除しました")
+                        st.rerun()
     else:
         st.info("登録ユーザーがいません")
 
