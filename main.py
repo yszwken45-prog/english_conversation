@@ -261,6 +261,57 @@ def _render_admin():
     else:
         st.info("登録ユーザーがいません")
 
+    st.divider()
+    st.markdown("#### サンプルデータ")
+    st.caption("alice / bob / carol / dave をサンプルユーザーとして追加します（パスワード: pass1234）")
+    if st.button("サンプルデータを投入", key="btn_seed"):
+        import random
+        from datetime import timedelta
+        SAMPLE_USERS = [("alice", "pass1234"), ("bob", "pass1234"), ("carol", "pass1234"), ("dave", "pass1234")]
+        MODES = ["日常英会話", "シャドーイング", "ディクテーション"]
+        AI_MSGS = ["Hello! How are you doing today?", "That's great! Can you tell me more?",
+                   "Excellent! Let's try the next sentence.", "Good job! Very natural.",
+                   "Let's practice a bit more.", "Nice work! You're improving quickly."]
+        USER_MSGS = ["I'm doing fine, thank you.", "Today was a busy day.",
+                     "I went to the supermarket.", "I need more practice.",
+                     "Can we try a different topic?", "I understood most of it."]
+        patterns = {
+            "alice": {"days": 28, "max_msgs": 8, "weights": [6, 2, 2]},
+            "bob":   {"days": 20, "max_msgs": 5, "weights": [3, 5, 2]},
+            "carol": {"days": 15, "max_msgs": 6, "weights": [2, 3, 5]},
+            "dave":  {"days": 10, "max_msgs": 4, "weights": [4, 3, 3]},
+        }
+        today = date.today()
+        added = []
+        for username, password in SAMPLE_USERS:
+            ok = auth.register_user(username, password)
+            if not ok:
+                continue
+            conn = database.get_db_connection()
+            uid = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()["id"]
+            pat = patterns[username]
+            active_days = sorted(random.sample(range(30), pat["days"]))
+            for offset in active_days:
+                session_date = (today - timedelta(days=29 - offset)).isoformat()
+                mode = random.choices(MODES, weights=pat["weights"])[0]
+                for _ in range(random.randint(2, pat["max_msgs"])):
+                    conn.execute(
+                        "INSERT INTO conversation_history (user_id, session_date, role, content, mode) VALUES (?, ?, ?, ?, ?)",
+                        (uid, session_date, "assistant", random.choice(AI_MSGS), mode)
+                    )
+                    conn.execute(
+                        "INSERT INTO conversation_history (user_id, session_date, role, content, mode) VALUES (?, ?, ?, ?, ?)",
+                        (uid, session_date, "user", random.choice(USER_MSGS), mode)
+                    )
+            conn.commit()
+            conn.close()
+            added.append(username)
+        if added:
+            st.success(f"追加しました: {', '.join(added)}")
+            st.rerun()
+        else:
+            st.info("追加できるサンプルユーザーがいません（すでに登録済みの可能性があります）")
+
 
 # ─── ページルーティング ─────────────────────────────────────
 if st.session_state.current_page == "dashboard":
