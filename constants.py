@@ -1,4 +1,12 @@
 APP_NAME = "生成AI英会話アプリ"
+VERSION = "1.0.0"
+ADMIN_USERNAME = "admin"
+AI_TONE_OPTIONS = ["フレンドリー", "フォーマル", "ビジネス"]
+AI_TONE_PROMPT_SUFFIX = {
+    "フレンドリー": " Use a friendly, casual, and encouraging tone.",
+    "フォーマル": " Use a formal and polite tone in all responses.",
+    "ビジネス": " Use a professional business tone, incorporating business vocabulary and real-world workplace scenarios.",
+}
 MODE_1 = "日常英会話"
 MODE_2 = "シャドーイング"
 MODE_3 = "ディクテーション"

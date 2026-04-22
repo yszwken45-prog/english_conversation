@@ -18,6 +18,7 @@ from langchain.schema import SystemMessage
 from openai import OpenAI
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+import pandas as pd
 import functions as ft
 import constants as ct
 import database
@@ -47,6 +48,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_id = None
     st.session_state.username = ""
+    st.session_state.current_page = "main"
 
 # ─── ログイン画面 ───────────────────────────────────────────
 if not st.session_state.logged_in:
@@ -88,33 +90,49 @@ if not st.session_state.logged_in:
 # ─── サイドバー（ログイン済み） ──────────────────────────────
 with st.sidebar:
     st.markdown(f"### ようこそ、{st.session_state.username} さん")
+
+    st.markdown("#### ナビゲーション")
+    _page_map = {"学習": "main", "ダッシュボード": "dashboard", "設定": "settings"}
+    if st.session_state.username == ct.ADMIN_USERNAME:
+        _page_map["管理者"] = "admin"
+    for _label, _key in _page_map.items():
+        _btn_type = "primary" if st.session_state.current_page == _key else "secondary"
+        if st.button(_label, key=f"nav_{_key}", use_container_width=True, type=_btn_type):
+            st.session_state.current_page = _key
+            st.rerun()
+
+    st.divider()
     if st.button("ログアウト", key="btn_logout"):
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
 
-    st.divider()
-    st.markdown("### 学習履歴")
-    session_dates = database.get_session_dates(st.session_state.user_id)
-    if session_dates:
-        selected_date = st.selectbox("日付", session_dates, label_visibility="collapsed")
-        if st.button("この日の履歴を表示", key="btn_show_history"):
-            st.session_state.history_to_show = selected_date
+    if st.session_state.current_page == "main":
+        st.divider()
+        st.markdown("### 学習履歴")
+        session_dates = database.get_session_dates(st.session_state.user_id)
+        if session_dates:
+            selected_date = st.selectbox("日付", session_dates, label_visibility="collapsed")
+            if st.button("この日の履歴を表示", key="btn_show_history"):
+                st.session_state.history_to_show = selected_date
 
-        if st.session_state.get("history_to_show"):
-            hist_msgs = database.load_messages_by_date(
-                st.session_state.user_id, st.session_state.history_to_show
-            )
-            with st.expander(f"{st.session_state.history_to_show} の記録", expanded=True):
-                for m in hist_msgs:
-                    if m["role"] == "assistant":
-                        st.markdown(f"**AI:** {m['content']}")
-                    elif m["role"] == "user":
-                        st.markdown(f"**あなた:** {m['content']}")
-                    else:
-                        st.markdown("---")
-    else:
-        st.info("まだ履歴がありません")
+            if st.session_state.get("history_to_show"):
+                hist_msgs = database.load_messages_by_date(
+                    st.session_state.user_id, st.session_state.history_to_show
+                )
+                with st.expander(f"{st.session_state.history_to_show} の記録", expanded=True):
+                    for m in hist_msgs:
+                        if m["role"] == "assistant":
+                            st.markdown(f"**AI:** {m['content']}")
+                        elif m["role"] == "user":
+                            st.markdown(f"**あなた:** {m['content']}")
+                        else:
+                            st.markdown("---")
+        else:
+            st.info("まだ履歴がありません")
+
+    st.divider()
+    st.caption(f"v{ct.VERSION}")
 
 
 def _append_and_save(role: str, content: str = ""):
@@ -129,6 +147,105 @@ def _append_and_save(role: str, content: str = ""):
         st.session_state.get("mode", "")
     )
 
+
+def _render_dashboard():
+    st.markdown(f"## {ct.APP_NAME}")
+    st.markdown("### ダッシュボード")
+    stats = database.get_dashboard_stats(st.session_state.user_id)
+    by_mode = stats["messages_by_mode"]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("総会話数", stats["total_messages"])
+    with col2:
+        st.metric("学習日数", stats["total_days"])
+    with col3:
+        best_mode = max(by_mode, key=by_mode.get) if by_mode else "—"
+        st.metric("最多使用モード", best_mode)
+
+    st.divider()
+    st.markdown("#### 直近30日の学習活動")
+    activity = database.get_daily_activity(st.session_state.user_id, days=30)
+    if activity:
+        df = pd.DataFrame(activity, columns=["日付", "会話数"]).set_index("日付")
+        st.bar_chart(df)
+    else:
+        st.info("まだ学習記録がありません")
+
+    st.divider()
+    st.markdown("#### モード別利用状況")
+    mode_data = {k: v for k, v in by_mode.items() if k}
+    if mode_data:
+        df_mode = pd.DataFrame.from_dict(mode_data, orient="index", columns=["回数"])
+        st.bar_chart(df_mode)
+    else:
+        st.info("まだ学習記録がありません")
+
+
+def _render_settings():
+    st.markdown(f"## {ct.APP_NAME}")
+    st.markdown("### プロフィール設定")
+    saved = database.get_user_settings(st.session_state.user_id)
+
+    st.markdown("#### AIのパーソナライズ")
+    _tone_idx = ct.AI_TONE_OPTIONS.index(saved["ai_tone"]) if saved["ai_tone"] in ct.AI_TONE_OPTIONS else 0
+    ai_tone = st.selectbox("AIの話し方", ct.AI_TONE_OPTIONS, index=_tone_idx)
+    _tone_desc = {
+        "フレンドリー": "フレンドリーでカジュアルな話し方。日常英会話の練習に最適です。",
+        "フォーマル": "丁寧でフォーマルな話し方。礼儀正しいコミュニケーションの練習に最適です。",
+        "ビジネス": "ビジネス英語を意識した話し方。職場でのコミュニケーション練習に最適です。",
+    }
+    st.caption(_tone_desc.get(ai_tone, ""))
+
+    st.markdown("#### デフォルト英語レベル")
+    _lvl_idx = ct.ENGLISH_LEVEL_OPTION.index(saved["english_level"]) if saved["english_level"] in ct.ENGLISH_LEVEL_OPTION else 0
+    english_level = st.selectbox("英語レベル", ct.ENGLISH_LEVEL_OPTION, index=_lvl_idx)
+
+    if st.button("設定を保存", type="primary"):
+        database.save_user_settings(st.session_state.user_id, ai_tone, english_level)
+        st.session_state.ai_tone = ai_tone
+        st.session_state.default_english_level = english_level
+        tone_suffix = ct.AI_TONE_PROMPT_SUFFIX.get(ai_tone, "")
+        st.session_state.chain_basic_conversation = ft.create_chain(
+            ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION + tone_suffix
+        )
+        st.success("設定を保存しました。AIの話し方が次の会話から反映されます。")
+
+
+def _render_admin():
+    if st.session_state.username != ct.ADMIN_USERNAME:
+        st.error("このページへのアクセス権限がありません")
+        return
+    st.markdown(f"## {ct.APP_NAME}")
+    st.markdown("### 管理者ページ")
+    users = database.get_all_users_stats()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("総ユーザー数", len(users))
+    with col2:
+        st.metric("総メッセージ数", sum(u["message_count"] for u in users))
+
+    st.divider()
+    st.markdown("#### ユーザー一覧")
+    if users:
+        df = pd.DataFrame(users)[["username", "created_at", "message_count", "session_days"]]
+        df.columns = ["ユーザー名", "登録日時", "総会話数", "学習日数"]
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("登録ユーザーがいません")
+
+
+# ─── ページルーティング ─────────────────────────────────────
+if st.session_state.current_page == "dashboard":
+    _render_dashboard()
+    st.stop()
+elif st.session_state.current_page == "settings":
+    _render_settings()
+    st.stop()
+elif st.session_state.current_page == "admin":
+    _render_admin()
+    st.stop()
 
 # タイトル表示
 st.markdown(f"## {ct.APP_NAME}")
@@ -161,8 +278,14 @@ if "messages" not in st.session_state:
         return_messages=True
     )
 
-    # モード「日常英会話」用のChain作成
-    st.session_state.chain_basic_conversation = ft.create_chain(ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION)
+    # ユーザー設定の読み込み
+    _user_settings = database.get_user_settings(st.session_state.user_id)
+    st.session_state.ai_tone = _user_settings["ai_tone"]
+    st.session_state.default_english_level = _user_settings["english_level"]
+
+    # モード「日常英会話」用のChain作成（AIトーン設定を反映）
+    _tone_suffix = ct.AI_TONE_PROMPT_SUFFIX.get(st.session_state.ai_tone, "")
+    st.session_state.chain_basic_conversation = ft.create_chain(ct.SYSTEM_TEMPLATE_BASIC_CONVERSATION + _tone_suffix)
 
     # 今日の履歴をDBから読み込む
     today_history = database.load_messages_by_date(st.session_state.user_id, st.session_state.session_date)
@@ -205,7 +328,8 @@ with col3:
         st.session_state.chat_open_flg = False
     st.session_state.pre_mode = st.session_state.mode
 with col4:
-    st.session_state.englv = st.selectbox(label="英語レベル", options=ct.ENGLISH_LEVEL_OPTION, label_visibility="collapsed")
+    _default_lvl_idx = ct.ENGLISH_LEVEL_OPTION.index(st.session_state.get("default_english_level", "初級者"))
+    st.session_state.englv = st.selectbox(label="英語レベル", options=ct.ENGLISH_LEVEL_OPTION, index=_default_lvl_idx, label_visibility="collapsed")
 
 with st.chat_message("assistant", avatar="images/ai_icon.jpg"):
     st.markdown("こちらは生成AIによる音声英会話の練習アプリです。何度も繰り返し練習し、英語力をアップさせましょう。")
