@@ -1,45 +1,45 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、リポジトリのコードを扱う際に Claude Code (claude.ai/code) へ提供するガイダンスです。
 
-## Running the App
+## アプリの起動
 
 ```bash
 streamlit run main.py
 ```
 
-Requires a `.env` file with:
+以下の内容を含む `.env` ファイルが必要です:
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-## Architecture
+## アーキテクチャ
 
-This is a Streamlit-based English conversation practice app. All application logic runs in a single `main.py` that Streamlit re-executes on every user interaction.
+Streamlit ベースの英会話練習アプリです。すべてのアプリケーションロジックは単一の `main.py` 内で動作し、ユーザー操作のたびに Streamlit が再実行します。
 
-**Entry points and data flow:**
-- `main.py` — top-level UI and control flow. Handles login gate, sidebar, mode selection, and dispatches to mode-specific logic within the same file.
-- `functions.py` — stateful helpers that read/write `st.session_state` directly (audio recording, transcription, chain creation, TTS).
-- `constants.py` — all LLM system prompts and UI option lists.
-- `database.py` — SQLite persistence (`app_data.db`). Tables: `users`, `conversation_history`.
-- `auth.py` — PBKDF2 password hashing and credential verification against the DB.
+**エントリーポイントとデータフロー:**
+- `main.py` — トップレベルの UI と制御フロー。ログインゲート、サイドバー、モード選択を処理し、同ファイル内のモード別ロジックに処理を振り分ける。
+- `functions.py` — `st.session_state` を直接読み書きするステートフルなヘルパー群（音声録音・文字起こし・チェーン生成・TTS）。
+- `constants.py` — LLM のシステムプロンプトおよび UI 選択肢リストをすべて定義。
+- `database.py` — SQLite 永続化（`app_data.db`）。テーブル: `users`, `conversation_history`。
+- `auth.py` — PBKDF2 によるパスワードハッシュ化と DB を用いた認証。
 
-**Session state lifecycle:**
-- `"logged_in"` / `"user_id"` / `"username"` are initialized once at module load (outside the `if "messages" not in st.session_state` guard).
-- All other state (messages, flags, LLM objects, chains) is initialized inside `if "messages" not in st.session_state`, which runs once per login session. On login, today's messages are loaded from the DB into `st.session_state.messages`.
-- Logout deletes all session_state keys and calls `st.rerun()`.
+**セッションステートのライフサイクル:**
+- `"logged_in"` / `"user_id"` / `"username"` はモジュールロード時に一度だけ初期化される（`if "messages" not in st.session_state` ガードの外）。
+- その他すべてのステート（messages・フラグ・LLM オブジェクト・チェーン）は `if "messages" not in st.session_state` 内で初期化され、ログインセッションごとに一度だけ実行される。ログイン時に当日のメッセージが DB から `st.session_state.messages` に読み込まれる。
+- ログアウト時はすべての session_state キーを削除し、`st.rerun()` を呼び出す。
 
-**Saving messages:** Use `_append_and_save(role, content)` (defined in `main.py`) instead of appending directly to `st.session_state.messages`. This writes to both the in-memory list and the SQLite DB.
+**メッセージの保存:** `st.session_state.messages` に直接追記せず、`_append_and_save(role, content)`（`main.py` 内で定義）を使うこと。これにより、インメモリリストと SQLite DB の両方に書き込まれる。
 
-**Three learning modes** (selected via dropdown, all in `main.py`):
-- `MODE_1` 日常英会話 — voice in → Whisper transcription → GPT-4o-mini via `ConversationChain` → TTS out. Uses `chain_basic_conversation` with persistent `ConversationSummaryBufferMemory`.
-- `MODE_2` シャドーイング — AI generates a sentence (TTS), user repeats by voice, Whisper transcribes, GPT evaluates similarity.
-- `MODE_3` ディクテーション — same as shadowing but user types the answer via `st.chat_input` instead of speaking.
+**3 つの学習モード**（ドロップダウンで選択、すべて `main.py` 内）:
+- `MODE_1` 日常英会話 — 音声入力 → Whisper 文字起こし → `ConversationChain` 経由で GPT-4o-mini → TTS 出力。永続化された `ConversationSummaryBufferMemory` を持つ `chain_basic_conversation` を使用。
+- `MODE_2` シャドーイング — AI が文章を生成（TTS）、ユーザーが音声で復唱、Whisper が文字起こし、GPT が類似度を評価。
+- `MODE_3` ディクテーション — シャドーイングと同様だが、ユーザーは音声ではなく `st.chat_input` でテキスト入力する。
 
-**LangChain version is pinned to 0.1.x** (`langchain==0.1.20`). Do not upgrade without testing — the `ConversationChain` / `ConversationSummaryBufferMemory` API changed significantly in later versions.
+**LangChain のバージョンは 0.1.x に固定**（`langchain==0.1.20`）。`ConversationChain` / `ConversationSummaryBufferMemory` の API は後続バージョンで大きく変更されているため、テストなしにアップグレードしないこと。
 
-## Key Constraints
+## 重要な制約
 
-- `audio/input/` and `audio/output/` directories must exist; audio files are created at runtime with timestamp-based names and deleted after use.
-- `app_data.db` is gitignored and created automatically on first run by `database.init_db()`.
-- The `streamlit-audiorecorder` and `audio-recorder-streamlit` packages both appear in requirements — `audiorecorder` from `streamlit-audiorecorder==0.0.6` is the one actually imported in `functions.py`.
+- `audio/input/` および `audio/output/` ディレクトリが存在している必要がある。音声ファイルは実行時にタイムスタンプ付きのファイル名で作成され、使用後に削除される。
+- `app_data.db` は .gitignore に含まれており、初回起動時に `database.init_db()` によって自動生成される。
+- `streamlit-audiorecorder` と `audio-recorder-streamlit` の両パッケージが requirements に記載されているが、`functions.py` で実際にインポートされるのは `streamlit-audiorecorder==0.0.6` の `audiorecorder` のみ。

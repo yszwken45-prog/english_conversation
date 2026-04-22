@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import date, timedelta
 
 DB_PATH = "app_data.db"
 
@@ -27,6 +28,12 @@ def init_db():
             content TEXT DEFAULT '',
             mode TEXT NOT NULL DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+        CREATE TABLE IF NOT EXISTS user_settings (
+            user_id INTEGER PRIMARY KEY,
+            ai_tone TEXT DEFAULT 'フレンドリー',
+            english_level TEXT DEFAULT '初級者',
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
     """)
@@ -62,3 +69,76 @@ def get_session_dates(user_id: int) -> list:
     ).fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+
+def get_user_settings(user_id: int) -> dict:
+    conn = get_db_connection()
+    row = conn.execute(
+        "SELECT ai_tone, english_level FROM user_settings WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return {"ai_tone": "フレンドリー", "english_level": "初級者"}
+
+
+def save_user_settings(user_id: int, ai_tone: str, english_level: str):
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO user_settings (user_id, ai_tone, english_level) VALUES (?, ?, ?) "
+        "ON CONFLICT(user_id) DO UPDATE SET ai_tone = excluded.ai_tone, english_level = excluded.english_level",
+        (user_id, ai_tone, english_level)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_dashboard_stats(user_id: int) -> dict:
+    conn = get_db_connection()
+    total_messages = conn.execute(
+        "SELECT COUNT(*) FROM conversation_history WHERE user_id = ? AND role = 'user'",
+        (user_id,)
+    ).fetchone()[0]
+    total_days = conn.execute(
+        "SELECT COUNT(DISTINCT session_date) FROM conversation_history WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()[0]
+    mode_rows = conn.execute(
+        "SELECT mode, COUNT(*) as cnt FROM conversation_history "
+        "WHERE user_id = ? AND role = 'user' GROUP BY mode",
+        (user_id,)
+    ).fetchall()
+    conn.close()
+    messages_by_mode = {row["mode"]: row["cnt"] for row in mode_rows}
+    return {
+        "total_messages": total_messages,
+        "total_days": total_days,
+        "messages_by_mode": messages_by_mode,
+    }
+
+
+def get_daily_activity(user_id: int, days: int = 30) -> list:
+    since = (date.today() - timedelta(days=days - 1)).isoformat()
+    conn = get_db_connection()
+    rows = conn.execute(
+        "SELECT session_date, COUNT(*) as cnt FROM conversation_history "
+        "WHERE user_id = ? AND role = 'user' AND session_date >= ? "
+        "GROUP BY session_date ORDER BY session_date ASC",
+        (user_id, since)
+    ).fetchall()
+    conn.close()
+    return [(row["session_date"], row["cnt"]) for row in rows]
+
+
+def get_all_users_stats() -> list:
+    conn = get_db_connection()
+    rows = conn.execute(
+        "SELECT u.id, u.username, u.created_at, "
+        "COUNT(CASE WHEN c.role = 'user' THEN 1 END) as message_count, "
+        "COUNT(DISTINCT c.session_date) as session_days "
+        "FROM users u LEFT JOIN conversation_history c ON u.id = c.user_id "
+        "GROUP BY u.id ORDER BY message_count DESC"
+    ).fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
