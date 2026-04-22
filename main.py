@@ -211,6 +211,23 @@ def _render_settings():
         )
         st.success("設定を保存しました。AIの話し方が次の会話から反映されます。")
 
+    st.divider()
+    st.markdown("#### パスワード変更")
+    current_pw = st.text_input("現在のパスワード", type="password", key="current_pw")
+    new_pw = st.text_input("新しいパスワード", type="password", key="new_pw")
+    new_pw2 = st.text_input("新しいパスワード（確認）", type="password", key="new_pw2")
+    if st.button("パスワードを変更", key="btn_change_pw"):
+        if not current_pw or not new_pw:
+            st.error("すべての項目を入力してください")
+        elif new_pw != new_pw2:
+            st.error("新しいパスワードが一致しません")
+        elif len(new_pw) < 4:
+            st.error("パスワードは4文字以上にしてください")
+        elif auth.change_password(st.session_state.user_id, current_pw, new_pw):
+            st.success("パスワードを変更しました")
+        else:
+            st.error("現在のパスワードが正しくありません")
+
 
 def _render_admin():
     if st.session_state.username != ct.ADMIN_USERNAME:

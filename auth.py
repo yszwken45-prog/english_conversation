@@ -28,6 +28,29 @@ def register_user(username: str, password: str) -> bool:
         conn.close()
 
 
+def change_password(user_id: int, current_password: str, new_password: str) -> bool:
+    """Returns True if password changed successfully, False if current_password is wrong."""
+    conn = database.get_db_connection()
+    row = conn.execute(
+        "SELECT password_hash, salt FROM users WHERE id = ?", (user_id,)
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return False
+    pwd_hash, _ = _hash_password(current_password, row["salt"])
+    if pwd_hash != row["password_hash"]:
+        return False
+    new_hash, new_salt = _hash_password(new_password)
+    conn = database.get_db_connection()
+    conn.execute(
+        "UPDATE users SET password_hash = ?, salt = ? WHERE id = ?",
+        (new_hash, new_salt, user_id)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
 def verify_user(username: str, password: str):
     """Returns user_id if credentials are valid, None otherwise."""
     conn = database.get_db_connection()
